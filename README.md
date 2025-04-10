@@ -39,3 +39,17 @@ Open `` src/components/CustomPaymentPage.js `` on Visual Studio Code and on `` l
 Create another terminal then in that terminal do `` cd ./backend `` then 
 `` npm install `` then
 `` npm run dev ``
+
+
+## Stripe Test Card Numbers
+``` 
+Card Type	Number	Behavior
+Always Succeeds	4242 4242 4242 4242	Immediate success
+Requires Auth	4000 0025 0000 3155	Needs additional verification
+Declined	4000 0000 0000 0002	Always fails
+```
+
+
+## Frontend Customization
+You can change the company name to your own company name from this page `` src/components/CustomPaymentPage.js `` `` (line 167) ``. Just change
+'YourCompany' to 'Your Own Company Sample Name'. You can also even add a logo beside it using <img> tag.
