@@ -1,9 +1,9 @@
-#Sample Stripe Payment
+# Sample Stripe Payment
 
-##Frontend
+## Frontend
 `` npm install ``
 `` npm start ``
 
-##Backend
+## Backend
 `` npm install ``
 `` npm run dev ``
