@@ -52,4 +52,4 @@ Declined	4000 0000 0000 0002	Always fails
 
 ## Frontend Customization
 You can change the company name to your own company name from this page `` src/components/CustomPaymentPage.js `` `` (line 167) ``. Just change
-'YourCompany' to 'Your Own Company Sample Name'. You can also even add a logo beside it using <img> tag.
+'YourCompany' to 'Your Own Company Sample Name'. You can also even add a logo beside it using ``<img>`` tag.
