@@ -38,7 +38,7 @@ Open `` src/components/CustomPaymentPage.js `` on Visual Studio Code and on `` l
 ## Backend Setup
 Create another terminal then in that terminal do `` cd ./backend `` then 
 `` npm install `` then
-`` npm run dev ``
+`` npm run dev ``. This `` npm run dev `` will only have an error if and only if you don't have nodemon package installed in your local in which you can do via this command `` npm install -g nodemon `` or the port 5000 is already running in that case you have to kill the port 5000 first before running this.
 
 
 ## Stripe Test Card Numbers
@@ -53,3 +53,8 @@ Declined	4000 0000 0000 0002	Always fails
 ## Frontend Customization
 You can change the company name to your own company name from this page `` src/components/CustomPaymentPage.js `` `` (line 167) ``. Just change
 'YourCompany' to 'Your Own Company Sample Name'. You can also even add a logo beside it using ``<img>`` tag.
+
+
+
+## Final Note
+After the customer have successfully entered his/her payment information and the payment was success as indicated in the page after clicking Pay button, the payment transaction will be automatically be reflected in your Stripe account transaction in this link https://dashboard.stripe.com/test/payments as status 'Succeeded'.
