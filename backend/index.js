@@ -9,75 +9,60 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Create Checkout Session
-app.post('/api/create-checkout-session', async (req, res) => {
+// Process Payment
+app.post('/api/process-payment', async (req, res) => {
   const { 
+    paymentMethodId, 
     amount, 
-    recipientName, 
-    recipientId, // Optional Stripe Connect account
-    email 
+    currency = 'usd', 
+    description = 'Payment',
+    metadata 
   } = req.body;
 
   try {
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      line_items: [{
-        price_data: {
-          currency: 'usd',
-          product_data: {
-            name: `Payment to ${recipientName}`,
-          },
-          unit_amount: Math.round(amount * 100), // Convert to cents
-        },
-        quantity: 1,
-      }],
-      mode: 'payment',
-      success_url: `${process.env.FRONTEND_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.FRONTEND_URL}/cancel`,
-      customer_email: email,
+    // Create Payment Intent
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(amount * 100), // Convert to cents
+      currency,
+      payment_method: paymentMethodId,
+      confirm: true,
+      description,
+      metadata,
       
-      // Optional: Connect Transfer
-      payment_intent_data: recipientId ? {
-        transfer_data: {
-          destination: recipientId
+      // Optional: Customize payment
+      payment_method_options: {
+        card: {
+          request_three_d_secure: 'any'
         }
-      } : undefined,
-
-      metadata: {
-        recipientName,
-        recipientId
       }
     });
 
-    res.json({ 
-      sessionId: session.id,
-      publishableKey: process.env.STRIPE_PUBLISHABLE_KEY
-    });
+    // Handle different payment intent statuses
+    switch (paymentIntent.status) {
+      case 'succeeded':
+        return res.json({ 
+          success: true, 
+          paymentIntent: paymentIntent 
+        });
+      
+      case 'requires_action':
+        return res.json({
+          success: false,
+          requiresAction: true,
+          clientSecret: paymentIntent.client_secret
+        });
+      
+      default:
+        return res.status(400).json({ 
+          success: false, 
+          error: 'Payment failed' 
+        });
+    }
   } catch (error) {
-    console.error('Checkout Session Error:', error);
+    console.error('Payment Processing Error:', error);
     res.status(500).json({ 
-      error: 'Failed to create checkout session',
-      details: error.message 
-    });
-  }
-});
-
-// Verify Payment Status
-app.get('/api/checkout-session/:sessionId', async (req, res) => {
-  try {
-    const session = await stripe.checkout.sessions.retrieve(
-      req.params.sessionId
-    );
-
-    res.json({
-      status: session.payment_status,
-      amount: session.amount_total / 100,
-      customer_email: session.customer_email
-    });
-  } catch (error) {
-    res.status(500).json({ 
-      error: 'Failed to retrieve session',
-      details: error.message 
+      success: false,
+      error: error.message 
     });
   }
 });

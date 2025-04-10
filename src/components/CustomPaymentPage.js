@@ -1,106 +1,300 @@
 import React, { useState, useEffect } from 'react';
-import { loadStripe } from '@stripe/stripe-js';
 import axios from 'axios';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 
-const CustomPaymentPage = () => {
+const stripePromise = loadStripe('pk_test_51Qk7O5AGEAsU6cwJd0gZkfTHG5PjtPTas19Ybgn24HA5wo4m0B5tOM0bAPRyDJPzALGgcGSwHw1eVxmFb6MWuC0O00tlJGZmNV');
+
+const CustomPaymentForm = () => {
   const [paymentDetails, setPaymentDetails] = useState({
     email: '',
     amount: '',
-    recipientName: 'Zain Saeed'
+    cardNumber: '',
+    cardExpiry: '',
+    cardCVC: '',
+    name: '',
+    address: {
+      street: '',
+      city: '',
+      state: '',
+      zipCode: ''
+    }
   });
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const [processing, setProcessing] = useState(false);
+  const [error, setError] = useState(null);
 
-    try {
-      // Create Checkout Session
-      const { data } = await axios.post('http://localhost:5000/api/create-checkout-session', {
-        email: paymentDetails.email,
-        amount: parseFloat(paymentDetails.amount),
-        recipientName: paymentDetails.recipientName
-      });
+  const stripe = useStripe();
+  const elements = useElements();
 
-      // Load Stripe
-      const stripe = await loadStripe(data.publishableKey);
-
-      // Redirect to Stripe Checkout
-      const { error } = await stripe.redirectToCheckout({
-        sessionId: data.sessionId
-      });
-
-      if (error) {
-        console.error('Checkout failed', error);
-      }
-    } catch (error) {
-      console.error('Payment initiation failed', error);
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    
+    // Handle nested address fields
+    if (name.startsWith('address.')) {
+      const addressField = name.split('.')[1];
+      setPaymentDetails(prev => ({
+        ...prev,
+        address: {
+          ...prev.address,
+          [addressField]: value
+        }
+      }));
+    } else {
+      setPaymentDetails(prev => ({
+        ...prev,
+        [name]: value
+      }));
     }
   };
 
-  // Success Page Component
-  const SuccessPage = () => {
-    const [paymentDetails, setPaymentDetails] = useState(null);
+  const validateForm = () => {
+    const errors = {};
+    
+    // Validate email
+    if (!paymentDetails.email.includes('@')) {
+      errors.email = 'Invalid email address';
+    }
 
-    useEffect(() => {
-      const fetchPaymentDetails = async () => {
-        const urlParams = new URLSearchParams(window.location.search);
-        const sessionId = urlParams.get('session_id');
+    // Validate amount
+    if (isNaN(paymentDetails.amount) || parseFloat(paymentDetails.amount) <= 0) {
+      errors.amount = 'Invalid amount';
+    }
 
-        try {
-          const { data } = await axios.get(`http://localhost:5000/api/checkout-session/${sessionId}`);
-          setPaymentDetails(data);
-        } catch (error) {
-          console.error('Failed to fetch payment details', error);
+    // Validate card details
+    if (!paymentDetails.cardNumber || paymentDetails.cardNumber.length < 12) {
+      errors.cardNumber = 'Invalid card number';
+    }
+
+    // Validate name
+    if (!paymentDetails.name || paymentDetails.name.length < 3) {
+      errors.name = 'Invalid name';
+    }
+
+    // Validate address
+    if (!paymentDetails.address.street) {
+      errors.street = 'Street address is required';
+    }
+
+    if (!paymentDetails.address.city) {
+      errors.city = 'City is required';
+    }
+
+    if (!paymentDetails.address.state) {
+      errors.state = 'State is required';
+    }
+
+    if (!paymentDetails.address.zipCode) {
+      errors.zipCode = 'ZIP code is required';
+    }
+
+    return errors;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    // Validate form
+    const validationErrors = validateForm();
+    if (Object.keys(validationErrors).length > 0) {
+      setError(validationErrors);
+      return;
+    }
+
+    setProcessing(true);
+    setError(null);
+
+    try {
+      // Create Payment Method
+      const { error, paymentMethod } = await stripe.createPaymentMethod({
+        type: 'card',
+        card: elements.getElement(CardElement),
+        billing_details: {
+          name: paymentDetails.name,
+          email: paymentDetails.email,
+          address: {
+            line1: paymentDetails.address.street,
+            city: paymentDetails.address.city,
+            state: paymentDetails.address.state,
+            postal_code: paymentDetails.address.zipCode
+          }
         }
-      };
+      });
 
-      fetchPaymentDetails();
-    }, []);
+      if (error) {
+        throw error;
+      }
 
-    if (!paymentDetails) return <div>Loading...</div>;
+      // Send payment to backend
+      const response = await axios.post('http://localhost:5000/api/process-payment', {
+        paymentMethodId: paymentMethod.id,
+        amount: parseFloat(paymentDetails.amount),
+        currency: 'usd',
+        description: 'Custom Payment',
+        metadata: {
+          email: paymentDetails.email,
+          name: paymentDetails.name
+        }
+      });
 
-    return (
-      <div>
-        <h1>Payment Successful!</h1>
-        <p>Amount: ${paymentDetails.amount}</p>
-        <p>Email: {paymentDetails.customer_email}</p>
-        <p>Status: {paymentDetails.status}</p>
-      </div>
-    );
+      // Handle successful payment
+      alert('Payment Successful!');
+    } catch (err) {
+      setError(err.message || 'Payment failed');
+    } finally {
+      setProcessing(false);
+    }
   };
 
   return (
-    <div className="payment-container">
-      <form onSubmit={handleSubmit}>
-        <h2>Complete Payment</h2>
-        <input
-          type="email"
-          value={paymentDetails.email}
-          onChange={(e) => setPaymentDetails(prev => ({
-            ...prev, 
-            email: e.target.value
-          }))}
-          placeholder="Your Email"
-          required
-        />
-        <input
-          type="number"
-          value={paymentDetails.amount}
-          onChange={(e) => setPaymentDetails(prev => ({
-            ...prev, 
-            amount: e.target.value
-          }))}
-          placeholder="Amount"
-          required
-        />
-        <button type="submit">Pay Now</button>
+    <div className="custom-payment-container">
+      <form onSubmit={handleSubmit} className="payment-form">
+        <h2>Complete Your Payment</h2>
+
+        {/* Payment Amount */}
+        <div className="form-group">
+          <label>Payment Amount</label>
+          <input
+            type="number"
+            name="amount"
+            value={paymentDetails.amount}
+            onChange={handleInputChange}
+            placeholder="Enter amount"
+            step="0.01"
+            required
+          />
+          {error?.amount && <span className="error">{error.amount}</span>}
+        </div>
+
+        {/* Email */}
+        <div className="form-group">
+          <label>Email Address</label>
+          <input
+            type="email"
+            name="email"
+            value={paymentDetails.email}
+            onChange={handleInputChange}
+            placeholder="Your email"
+            required
+          />
+          {error?.email && <span className="error">{error.email}</span>}
+        </div>
+
+        {/* Card Details */}
+        <div className="form-group">
+          <label>Card Details</label>
+          <CardElement 
+            options={{
+              style: {
+                base: {
+                  fontSize: '16px',
+                  color: '#424770',
+                  '::placeholder': {
+                    color: '#aab7c4',
+                  },
+                },
+                invalid: {
+                  color: '#9e2146',
+                },
+              },
+            }}
+          />
+        </div>
+
+        {/* Name */}
+        <div className="form-group">
+          <label>Cardholder Name</label>
+          <input
+            type="text"
+            name="name"
+            value={paymentDetails.name}
+            onChange={handleInputChange}
+            placeholder="Name on Card"
+            required
+          />
+          {error?.name && <span className="error">{error.name}</span>}
+        </div>
+
+        {/* Billing Address */}
+        <div className="form-group">
+          <label>Billing Address</label>
+          <input
+            type="text"
+            name="address.street"
+            value={paymentDetails.address.street}
+            onChange={handleInputChange}
+            placeholder="Street Address"
+            required
+          />
+          {error?.street && <span className="error">{error.street}</span>}
+        </div>
+
+        <div className="form-row">
+          <div className="form-group">
+            <input
+              type="text"
+              name="address.city"
+              value={paymentDetails.address.city}
+              onChange={handleInputChange}
+              placeholder="City"
+              required
+            />
+            {error?.city && <span className="error">{error.city}</span>}
+          </div>
+          <div className="form-group">
+            <input
+              type="text"
+              name="address.state"
+              value={paymentDetails.address.state}
+              onChange={handleInputChange}
+              placeholder="State"
+              required
+            />
+            {error?.state && <span className="error">{error.state}</span>}
+          </div>
+          <div className="form-group">
+            <input
+              type="text"
+              name="address.zipCode"
+              value={paymentDetails.address.zipCode}
+              onChange={handleInputChange}
+              placeholder="ZIP Code"
+              required
+            />
+            {error?.zipCode && <span className="error">{error.zipCode}</span>}
+          </div>
+        </div>
+
+        {/* Submit Button */}
+        <button 
+          type="submit" 
+          className="submit-button" 
+          disabled={processing}
+        >
+          {processing ? 'Processing...' : `Pay $${paymentDetails.amount}`}
+        </button>
+
+        {/* Error Display */}
+        {error && typeof error === 'string' && (
+          <div className="error-message">{error}</div>
+        )}
       </form>
     </div>
   );
 };
 
-// CSS Styles
+// Wrap with Stripe Elements
+const PaymentPage = () => (
+  <Elements stripe={stripePromise}>
+    <CustomPaymentForm />
+  </Elements>
+);
+
+export default PaymentPage;
+
+// CSS Styles (can be in a separate file)
 const styles = `
-.payment-container {
+.custom-payment-container {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -109,28 +303,13 @@ const styles = `
   font-family: 'Arial', sans-serif;
 }
 
-.payment-card {
+.payment-form {
   background: white;
-  border-radius: 12px;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  padding: 30px;
   width: 100%;
   max-width: 500px;
-  overflow: hidden;
-}
-
-.transaction-header {
-  background-color: #f8f9fa;
-  padding: 20px;
-  text-align: center;
-  border-bottom: 1px solid #e9ecef;
-}
-
-.transaction-details {
-  margin-top: 15px;
-}
-
-.payment-form {
-  padding: 20px;
 }
 
 .form-group {
@@ -140,13 +319,13 @@ const styles = `
 .form-group label {
   display: block;
   margin-bottom: 8px;
-  color: #495057;
+  color: #333;
 }
 
 .form-group input {
   width: 100%;
   padding: 10px;
-  border: 1px solid #ced4da;
+  border: 1px solid #ddd;
   border-radius: 4px;
 }
 
@@ -159,27 +338,26 @@ const styles = `
   width: 30%;
 }
 
-.pay-button {
+.submit-button {
   width: 100%;
   padding: 12px;
   background-color: #4CAF50;
   color: white;
   border: none;
   border-radius: 4px;
-  font-size: 16px;
   cursor: pointer;
-  transition: background-color 0.3s ease;
 }
 
-.pay-button:hover {
-  background-color: #45a049;
+.error {
+  color: red;
+  font-size: 0.8em;
+  margin-top: 5px;
 }
 
-.secure-note {
+.error-message {
+  color: red;
   text-align: center;
   margin-top: 15px;
-  color: #6c757d;
-  font-size: 0.9em;
 }
 `;
 
@@ -188,5 +366,3 @@ const styleSheet = document.createElement("style")
 styleSheet.type = "text/css"
 styleSheet.innerText = styles
 document.head.appendChild(styleSheet)
-
-export default CustomPaymentPage;
