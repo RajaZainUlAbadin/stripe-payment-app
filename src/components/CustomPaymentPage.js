@@ -1,17 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import axios from 'axios';
 import { loadStripe } from '@stripe/stripe-js';
-import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
+import { 
+  Elements, 
+  CardElement, 
+  useStripe, 
+  useElements 
+} from '@stripe/react-stripe-js';
 
+// Load Stripe outside of component to avoid recreating on every render
 const stripePromise = loadStripe('pk_test_51Qk7O5AGEAsU6cwJd0gZkfTHG5PjtPTas19Ybgn24HA5wo4m0B5tOM0bAPRyDJPzALGgcGSwHw1eVxmFb6MWuC0O00tlJGZmNV');
 
 const CustomPaymentForm = () => {
   const [paymentDetails, setPaymentDetails] = useState({
     email: '',
     amount: '',
-    cardNumber: '',
-    cardExpiry: '',
-    cardCVC: '',
     name: '',
     address: {
       street: '',
@@ -24,6 +27,7 @@ const CustomPaymentForm = () => {
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState(null);
 
+  // Use Stripe hooks
   const stripe = useStripe();
   const elements = useElements();
 
@@ -48,67 +52,23 @@ const CustomPaymentForm = () => {
     }
   };
 
-  const validateForm = () => {
-    const errors = {};
-    
-    // Validate email
-    if (!paymentDetails.email.includes('@')) {
-      errors.email = 'Invalid email address';
-    }
-
-    // Validate amount
-    if (isNaN(paymentDetails.amount) || parseFloat(paymentDetails.amount) <= 0) {
-      errors.amount = 'Invalid amount';
-    }
-
-    // Validate card details
-    if (!paymentDetails.cardNumber || paymentDetails.cardNumber.length < 12) {
-      errors.cardNumber = 'Invalid card number';
-    }
-
-    // Validate name
-    if (!paymentDetails.name || paymentDetails.name.length < 3) {
-      errors.name = 'Invalid name';
-    }
-
-    // Validate address
-    if (!paymentDetails.address.street) {
-      errors.street = 'Street address is required';
-    }
-
-    if (!paymentDetails.address.city) {
-      errors.city = 'City is required';
-    }
-
-    if (!paymentDetails.address.state) {
-      errors.state = 'State is required';
-    }
-
-    if (!paymentDetails.address.zipCode) {
-      errors.zipCode = 'ZIP code is required';
-    }
-
-    return errors;
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validate form
-    const validationErrors = validateForm();
-    if (Object.keys(validationErrors).length > 0) {
-      setError(validationErrors);
+    if (!stripe || !elements) {
       return;
     }
-
+  
     setProcessing(true);
     setError(null);
-
+  
     try {
       // Create Payment Method
+      const cardElement = elements.getElement(CardElement);
+      
       const { error, paymentMethod } = await stripe.createPaymentMethod({
         type: 'card',
-        card: elements.getElement(CardElement),
+        card: cardElement,
         billing_details: {
           name: paymentDetails.name,
           email: paymentDetails.email,
@@ -120,11 +80,11 @@ const CustomPaymentForm = () => {
           }
         }
       });
-
+  
       if (error) {
         throw error;
       }
-
+  
       // Send payment to backend
       const response = await axios.post('http://localhost:5000/api/process-payment', {
         paymentMethodId: paymentMethod.id,
@@ -136,35 +96,59 @@ const CustomPaymentForm = () => {
           name: paymentDetails.name
         }
       });
-
+  
       // Handle successful payment
-      alert('Payment Successful!');
+      if (response.data.success) {
+        alert('Payment Successful!');
+      } else {
+        throw new Error(response.data.error);
+      }
     } catch (err) {
+      console.error('Payment Error:', err);
       setError(err.message || 'Payment failed');
     } finally {
       setProcessing(false);
     }
   };
 
+  // Dummy data fill function
+  const fillDummyData = () => {
+    setPaymentDetails({
+      email: 'test@example.com',
+      amount: '100.00',
+      name: 'John Doe',
+      address: {
+        street: '123 Test Street',
+        city: 'Test City',
+        state: 'CA',
+        zipCode: '12345'
+      }
+    });
+  };
+
+  // Test card fill function
+  const fillTestCard = () => {
+    // Use Stripe test card
+    const cardElement = elements.getElement(CardElement);
+    cardElement.clear(); // Clear any existing input
+    cardElement.update({
+      value: '4242424242424242' // Successful Stripe test card
+    });
+  };
+
   return (
     <div className="custom-payment-container">
+      <div className="test-buttons">
+        <button type="button" onClick={fillDummyData}>
+          Fill Dummy Data
+        </button>
+        <button type="button" onClick={fillTestCard}>
+          Fill Test Card
+        </button>
+      </div>
+
       <form onSubmit={handleSubmit} className="payment-form">
         <h2>Complete Your Payment</h2>
-
-        {/* Payment Amount */}
-        <div className="form-group">
-          <label>Payment Amount</label>
-          <input
-            type="number"
-            name="amount"
-            value={paymentDetails.amount}
-            onChange={handleInputChange}
-            placeholder="Enter amount"
-            step="0.01"
-            required
-          />
-          {error?.amount && <span className="error">{error.amount}</span>}
-        </div>
 
         {/* Email */}
         <div className="form-group">
@@ -177,7 +161,20 @@ const CustomPaymentForm = () => {
             placeholder="Your email"
             required
           />
-          {error?.email && <span className="error">{error.email}</span>}
+        </div>
+
+        {/* Amount */}
+        <div className="form-group">
+          <label>Payment Amount</label>
+          <input
+            type="number"
+            name="amount"
+            value={paymentDetails.amount}
+            onChange={handleInputChange}
+            placeholder="Enter amount"
+            step="0.01"
+            required
+          />
         </div>
 
         {/* Card Details */}
@@ -212,12 +209,11 @@ const CustomPaymentForm = () => {
             placeholder="Name on Card"
             required
           />
-          {error?.name && <span className="error">{error.name}</span>}
         </div>
 
         {/* Billing Address */}
         <div className="form-group">
-          <label>Billing Address</label>
+          <label>Street Address</label>
           <input
             type="text"
             name="address.street"
@@ -226,11 +222,11 @@ const CustomPaymentForm = () => {
             placeholder="Street Address"
             required
           />
-          {error?.street && <span className="error">{error.street}</span>}
         </div>
 
         <div className="form-row">
           <div className="form-group">
+            <label>City</label>
             <input
               type="text"
               name="address.city"
@@ -239,9 +235,9 @@ const CustomPaymentForm = () => {
               placeholder="City"
               required
             />
-            {error?.city && <span className="error">{error.city}</span>}
           </div>
           <div className="form-group">
+            <label>State</label>
             <input
               type="text"
               name="address.state"
@@ -250,9 +246,9 @@ const CustomPaymentForm = () => {
               placeholder="State"
               required
             />
-            {error?.state && <span className="error">{error.state}</span>}
           </div>
           <div className="form-group">
+            <label>ZIP Code</label>
             <input
               type="text"
               name="address.zipCode"
@@ -261,7 +257,6 @@ const CustomPaymentForm = () => {
               placeholder="ZIP Code"
               required
             />
-            {error?.zipCode && <span className="error">{error.zipCode}</span>}
           </div>
         </div>
 
@@ -269,13 +264,13 @@ const CustomPaymentForm = () => {
         <button 
           type="submit" 
           className="submit-button" 
-          disabled={processing}
+          disabled={processing || !stripe}
         >
-          {processing ? 'Processing...' : `Pay $${paymentDetails.amount}`}
+          {processing ? 'Processing...' : `Pay $${paymentDetails.amount || '0.00'}`}
         </button>
 
         {/* Error Display */}
-        {error && typeof error === 'string' && (
+        {error && (
           <div className="error-message">{error}</div>
         )}
       </form>
@@ -284,13 +279,13 @@ const CustomPaymentForm = () => {
 };
 
 // Wrap with Stripe Elements
-const PaymentPage = () => (
+const CustomPaymentPage = () => (
   <Elements stripe={stripePromise}>
     <CustomPaymentForm />
   </Elements>
 );
 
-export default PaymentPage;
+export default CustomPaymentPage;
 
 // CSS Styles (can be in a separate file)
 const styles = `
