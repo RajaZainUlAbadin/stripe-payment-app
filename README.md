@@ -1,9 +1,9 @@
 # Sample Stripe Payment
 
 ## Frontend
-`` npm install ``
+`` npm install `` then
 `` npm start ``
 
 ## Backend
-`` npm install ``
+`` npm install `` then
 `` npm run dev ``
