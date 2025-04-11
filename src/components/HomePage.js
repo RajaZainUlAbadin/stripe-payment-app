@@ -8,23 +8,23 @@ const HomePage = () => {
   const products = [
     {
       title: "Avanço de tecnologia em sistemas",
-      price: "4,500,000.00",
+      price: "4,500.00",
     },
     {
       title: "Curso Programação intermediário",
-      price: "5,000,000.00",
+      price: "5,000.00",
     },
     {
       title: "Desenvolvimento completo",
-      price: "1,000,000.00",
+      price: "100,000.00",
     },
     {
       title: "Engenharia de Sistema",
-      price: "350,000,000.00",
+      price: "350,000.00",
     },
     {
       title: "Implantação Software avançado",
-      price: "9,999,000.00",
+      price: "99,999.00",
     },
     {
       title: "Invoice Requisitada",
@@ -32,11 +32,11 @@ const HomePage = () => {
     },
     {
       title: "Mentoria Dedicada",
-      price: "10,000,000.00",
+      price: "10,000.00",
     },
     {
       title: "Montagem empresarial",
-      price: "580,000,000.00",
+      price: "58,000.00",
     },
   ];
 

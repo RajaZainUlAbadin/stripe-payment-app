@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { useLocation } from 'react-router-dom'; 
 import { loadStripe } from '@stripe/stripe-js';
 import { 
   Elements, 
@@ -21,49 +22,50 @@ import {
 const stripePromise = loadStripe('pk_test_51Qk7O5AGEAsU6cwJd0gZkfTHG5PjtPTas19Ybgn24HA5wo4m0B5tOM0bAPRyDJPzALGgcGSwHw1eVxmFb6MWuC0O00tlJGZmNV');
 
 // Success Page Component
-const SuccessPage = ({ paymentDetails }) => {
-    return (
+const SuccessPage = ({ paymentDetails, amount, productTitle }) => {
+  return (
+    <div className="payment-layout">
       <div className="success-container">
         <div className="success-card">
           <FaCheckCircle className="success-icon" />
           <h2>Payment Successful!</h2>
           <div className="success-details">
             <p>
-              <FaDollarSign /> Amount Paid: 
-              <span>${paymentDetails.amount}</span>
+              <span>Product:</span>
+              <span>{productTitle}</span>
             </p>
             <p>
-              <FaUser /> Name: 
-              <span>{paymentDetails.name}</span>
+              <span>Amount Paid:</span>
+              <span>USD ${amount}</span>
             </p>
             <p>
-              <FaEnvelope /> Email: 
+              <span>Email:</span>
               <span>{paymentDetails.email}</span>
             </p>
           </div>
           <button 
-            onClick={() => window.location.reload()}
+            onClick={() => window.location.href = '/'}
             className="back-button"
           >
-            Make Another Payment
+            Return to Home
           </button>
         </div>
       </div>
-    );
+    </div>
+  );
 };
 
-  
-const CustomPaymentForm = () => {
+
+
+const CustomPaymentForm = ({ productTitle, amount })  => {
   const [paymentDetails, setPaymentDetails] = useState({
     email: '',
-    amount: '',
-    name: '',
-    address: {
-      street: '',
-      city: '',
-      state: '',
-      zipCode: ''
-    }
+    firstName: '',
+    lastName: '',
+    address: '',
+    city: '',
+    postalCode: '',
+    country: '',
   });
 
   const [processing, setProcessing] = useState(false);
@@ -95,6 +97,22 @@ const CustomPaymentForm = () => {
     }
   };
 
+  const validateCardNumber = (value) => {
+    // Remove spaces and non-numeric characters
+    const cleaned = value.replace(/\D/g, '');
+    // Add space after every 4 digits
+    return cleaned.replace(/(\d{4})/g, '$1 ').trim();
+  };
+  
+  const validateExpiry = (value) => {
+    // Remove non-numeric characters
+    const cleaned = value.replace(/\D/g, '');
+    if (cleaned.length >= 2) {
+      return `${cleaned.slice(0, 2)}/${cleaned.slice(2, 4)}`;
+    }
+    return cleaned;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -106,23 +124,22 @@ const CustomPaymentForm = () => {
     setError(null);
   
     try {
-      // Create Payment Method
-      const cardElement = elements.getElement(CardElement);
-      
+      const card = elements.getElement(CardElement);
       const { error, paymentMethod } = await stripe.createPaymentMethod({
         type: 'card',
-        card: cardElement,
+        card: card,
         billing_details: {
-          name: paymentDetails.name,
+          name: `${paymentDetails.firstName} ${paymentDetails.lastName}`.trim(),
           email: paymentDetails.email,
           address: {
-            line1: paymentDetails.address.street,
-            city: paymentDetails.address.city,
-            state: paymentDetails.address.state,
-            postal_code: paymentDetails.address.zipCode
+            line1: paymentDetails.address,
+            city: paymentDetails.city,
+            postal_code: paymentDetails.postalCode,
+            country: paymentDetails.country,
           }
         }
       });
+
   
       if (error) {
         throw error;
@@ -131,12 +148,12 @@ const CustomPaymentForm = () => {
       // Send payment to backend
       const response = await axios.post('http://localhost:5000/api/process-payment', {
         paymentMethodId: paymentMethod.id,
-        amount: parseFloat(paymentDetails.amount),
+        amount: parseFloat(amount.replace(/,/g, '')),
         currency: 'usd',
-        description: 'Custom Payment',
+        description: productTitle,
         metadata: {
           email: paymentDetails.email,
-          name: paymentDetails.name
+          name: `${paymentDetails.firstName} ${paymentDetails.lastName}`.trim()
         }
       });
   
@@ -159,329 +176,405 @@ const CustomPaymentForm = () => {
     return <SuccessPage paymentDetails={paymentDetails} />;
   }
 
+  const countries = [
+    { code: 'AF', name: 'Afghanistan' },
+    { code: 'AL', name: 'Albania' },
+    { code: 'DZ', name: 'Algeria' },
+    { code: 'AD', name: 'Andorra' },
+    { code: 'AO', name: 'Angola' },
+    { code: 'AG', name: 'Antigua and Barbuda' },
+    { code: 'AR', name: 'Argentina' },
+    { code: 'AM', name: 'Armenia' },
+    { code: 'AU', name: 'Australia' },
+    { code: 'AT', name: 'Austria' },
+    { code: 'AZ', name: 'Azerbaijan' },
+    { code: 'BS', name: 'Bahamas' },
+    { code: 'BH', name: 'Bahrain' },
+    { code: 'BD', name: 'Bangladesh' },
+    { code: 'BB', name: 'Barbados' },
+    { code: 'BY', name: 'Belarus' },
+    { code: 'BE', name: 'Belgium' },
+    { code: 'BZ', name: 'Belize' },
+    { code: 'BJ', name: 'Benin' },
+    { code: 'BT', name: 'Bhutan' },
+    { code: 'BO', name: 'Bolivia' },
+    { code: 'BA', name: 'Bosnia and Herzegovina' },
+    { code: 'BW', name: 'Botswana' },
+    { code: 'BR', name: 'Brazil' },
+  ];
+
+
   return (
-    <div className="custom-payment-container">
-      <form onSubmit={handleSubmit} className="payment-form">
-        <div className="form-header">
-          <h2>Complete Your Payment</h2>
-          <p>Secure payment with YourCompany</p>
-        </div>
+    <div className="payment-layout">
+      <form onSubmit={handleSubmit}>
+        <div className="payment-form-container">
+          <h2>Contact</h2>
+          <div className="form-group">
+            <input
+              type="email"
+              name="email"
+              value={paymentDetails.email}
+              onChange={(e) => setPaymentDetails({...paymentDetails, email: e.target.value})}
+              placeholder="Email"
+              required
+            />
+          </div>
 
-        {/* Email */}
-        <div className="form-group">
-          <label><FaEnvelope /> Email Address</label>
-          <input
-            type="email"
-            name="email"
-            value={paymentDetails.email}
-            onChange={handleInputChange}
-            placeholder="Your email"
-            required
-          />
-        </div>
+          <h2>Payment</h2>
+          <div className="payment-security-note">
+            All transactions are secure and encrypted.
+          </div>
 
-        {/* Amount */}
-        <div className="form-group">
-          <label><FaDollarSign /> Payment Amount</label>
-          <input
-            type="number"
-            name="amount"
-            value={paymentDetails.amount}
-            onChange={handleInputChange}
-            placeholder="Enter amount"
-            step="0.01"
-            required
-          />
-        </div>
+          <div className="credit-card-section">
+            <div className="payment-method-header">
+              <input type="radio" checked readOnly />
+              <span>Credit card</span>
+              <div className="card-icons">
+                <img src="https://cdn.shopify.com/shopifycloud/checkout-web/assets/c1.en/assets/visa.sxIq5Dot.svg" alt="Visa" />
+                <img src="https://cdn.shopify.com/shopifycloud/checkout-web/assets/c1.en/assets/mastercard.1c4_lyMp.svg" alt="Mastercard" />
+                <img src="https://cdn.shopify.com/shopifycloud/checkout-web/assets/c1.en/assets/discover.C7UbFpNb.svg" alt="Discover" />
+                <img src="https://cdn.shopify.com/shopifycloud/checkout-web/assets/c1.en/assets/amex.Csr7hRoy.svg" alt="Amex" />
+                <span className="more-cards">+4</span>
+              </div>
+            </div>
 
-        {/* Card Details */}
-        <div className="form-group">
-          <label><FaCreditCard /> Card Details</label>
-          <CardElement 
-            options={{
-              style: {
-                base: {
-                  fontSize: '16px',
-                  color: '#424770',
-                  '::placeholder': {
-                    color: '#aab7c4',
+            <div className="card-element-container">
+              <CardElement
+                options={{
+                  style: {
+                    base: {
+                      fontSize: '16px',
+                      color: '#424770',
+                      '::placeholder': {
+                        color: '#aab7c4',
+                      },
+                    },
+                    invalid: {
+                      color: '#9e2146',
+                    },
                   },
-                },
-                invalid: {
-                  color: '#9e2146',
-                },
-              },
-            }}
-          />
-        </div>
+                }}
+              />
+            </div>
+          </div>
 
-        {/* Name */}
-        <div className="form-group">
-          <label><FaUser /> Cardholder Name</label>
-          <input
-            type="text"
-            name="name"
-            value={paymentDetails.name}
-            onChange={handleInputChange}
-            placeholder="Name on Card"
-            required
-          />
-        </div>
+          <h2>Billing address</h2>
+          
+          <div className="country-select">
+            <select 
+              name="country"
+              value={paymentDetails.country}
+              onChange={(e) => setPaymentDetails({...paymentDetails, country: e.target.value})}
+              required
+            >
+              <option value="">Country/Region</option>
+              {countries.map((country) => (
+                <option key={country.code} value={country.code}>
+                  {country.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
-        {/* Billing Address */}
-        <div className="form-group">
-          <label><FaMapMarkerAlt /> Street Address</label>
-          <input
-            type="text"
-            name="address.street"
-            value={paymentDetails.address.street}
-            onChange={handleInputChange}
-            placeholder="Street Address"
-            required
-          />
-        </div>
-
-        <div className="form-row">
-          <div className="form-group">
-            <label>City</label>
+          <div className="name-fields">
             <input
               type="text"
-              name="address.city"
-              value={paymentDetails.address.city}
-              onChange={handleInputChange}
+              placeholder="First name (optional)"
+              value={paymentDetails.firstName}
+              onChange={(e) => setPaymentDetails({...paymentDetails, firstName: e.target.value})}
+            />
+            <input
+              type="text"
+              placeholder="Last name"
+              value={paymentDetails.lastName}
+              onChange={(e) => setPaymentDetails({...paymentDetails, lastName: e.target.value})}
+              required
+            />
+          </div>
+
+          <input
+            type="text"
+            placeholder="Address"
+            value={paymentDetails.address}
+            onChange={(e) => setPaymentDetails({...paymentDetails, address: e.target.value})}
+            required
+          />
+
+          <div className="postal-city-row">
+            <input
+              type="text"
+              placeholder="Postal code (optional)"
+              value={paymentDetails.postalCode}
+              onChange={(e) => setPaymentDetails({...paymentDetails, postalCode: e.target.value})}
+            />
+            <input
+              type="text"
               placeholder="City"
+              value={paymentDetails.city}
+              onChange={(e) => setPaymentDetails({...paymentDetails, city: e.target.value})}
               required
             />
           </div>
-          <div className="form-group">
-            <label>State</label>
-            <input
-              type="text"
-              name="address.state"
-              value={paymentDetails.address.state}
-              onChange={handleInputChange}
-              placeholder="State"
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label>ZIP Code</label>
-            <input
-              type="text"
-              name="address.zipCode"
-              value={paymentDetails.address.zipCode}
-              onChange={handleInputChange}
-              placeholder="ZIP Code"
-              required
-            />
-          </div>
+
+          <button 
+            type="submit" 
+            className="pay-now-button"
+            disabled={processing || !stripe}
+          >
+            {processing ? 'Processing...' : `Pay $${amount}`}
+          </button>
+
+          {error && (
+            <div className="error-message">{error}</div>
+          )}
         </div>
 
-        {/* Submit Button */}
-        <button 
-          type="submit" 
-          className="submit-button" 
-          disabled={processing || !stripe}
-        >
-          {processing ? 'Processing...' : `Pay $${paymentDetails.amount || '0.00'}`}
-        </button>
-
-        {/* Error Display */}
-        {error && (
-          <div className="error-message">{error}</div>
-        )}
       </form>
+      
+      <div className="order-summary">
+        <div className="product-summary">
+          <div className="product-image">
+            <img src="https://cdn.shopify.com/s/files/1/0701/3934/7201/files/VisaNet_36367f1e-416e-478c-87f9-62bf51239594_64x64.jpg?v=1716476840"/>
+          </div>
+          <div className="product-info">
+            <span className="product-title">{productTitle}</span>
+            <span className="product-price">${amount}</span>
+          </div>
+        </div>
+        <div className="total-section">
+          <div className="total-row">
+            <span>Total</span>
+            <span className="total-amount">USD ${amount}</span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
 
-
 // Wrap with Stripe Elements
-const CustomPaymentPage = () => (
-  <Elements stripe={stripePromise}>
-    <CustomPaymentForm />
-  </Elements>
-);
+const CustomPaymentPage = () => {
+  const location = useLocation();
+  const { productTitle, amount } = location.state || {};
+
+  return(
+    <Elements stripe={stripePromise}>
+      <CustomPaymentForm productTitle={productTitle} amount={amount} />
+    </Elements>
+  );
+};
 
 export default CustomPaymentPage;
-// CSS Styles
 const styles = `
-:root {
-  --primary-color: #4a90e2;
-  --secondary-color: #4CAF50;
-  --background-color: #ffffff;
-}
-
-body {
-  margin: 0;
-  font-family: 'Inter', sans-serif;
-  background-color: var(--background-color);
-}
-
-.custom-payment-container {
+.payment-layout {
   display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
+  max-width: 1200px;
+  margin: 0 auto;
+  gap: 40px;
   padding: 20px;
-  box-sizing: border-box;
 }
 
-.payment-form {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-  padding: 40px;
-  width: 100%;
-  max-width: 500px;
-  animation: fadeIn 0.5s ease;
+.payment-form-container {
+  flex: 1;
+  max-width: 650px;
 }
 
-.form-header {
-  text-align: center;
-  margin-bottom: 30px;
+.order-summary {
+  width: 350px;
+  background: #f7f7f7;
+  padding: 20px;
+  border-radius: 4px;
 }
 
-.form-header h2 {
-  color: var(--primary-color);
-  margin-bottom: 10px;
-}
-
-.form-header p {
-  color: #6c757d;
-}
-
-.form-group {
-  margin-bottom: 20px;
-}
-
-.form-group label {
+.product-summary {
   display: flex;
-  align-items: center;
-  margin-bottom: 10px;
-  color: #333;
-  font-weight: 500;
+  gap: 15px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #e0e0e0;
 }
 
-.form-group label svg {
-  margin-right: 10px;
-  color: var(--primary-color);
+.product-image {
+  width: 50px;
+  height: 50px;
+  background: #fff;
+  border-radius: 4px;
 }
 
-.form-group input {
-  width: 100%;
-  padding: 12px;
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
-  transition: all 0.3s ease;
+.product-info {
+  display: flex;
+  flex-direction: column;
 }
 
-.form-group input:focus {
-  outline: none;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px rgba(74,144,226,0.2);
+.total-section {
+  padding-top: 20px;
 }
 
-.form-row {
+.total-row {
   display: flex;
   justify-content: space-between;
-}
-
-.form-row .form-group {
-  width: 30%;
-}
-
-.submit-button {
-  width: 100%;
-  padding: 15px;
-  background-color: var(--secondary-color);
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
   font-weight: bold;
 }
 
-.submit-button:hover {
-  background-color: #45a049;
+input, select {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  margin-bottom: 15px;
 }
 
-.submit-button:disabled {
-  background-color: #cccccc;
-  cursor: not-allowed;
+.card-row {
+  display: flex;
+  gap: 15px;
+}
+
+.payment-method-header {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.card-icons {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.pay-now-button {
+  width: 100%;
+  padding: 15px;
+  background: #0047cc;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.name-fields, .city-state {
+  display: flex;
+  gap: 15px;
+}
+
+.payment-security-note {
+  color: #666;
+  margin-bottom: 15px;
+}
+
+.license-required {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 15px 0;
 }
 
 .error-message {
-  color: #d9534f;
-  text-align: center;
+  background-color: #fff2f0;
+  border: 1px solid #ffccc7;
+  color: #ff4d4f;
+  padding: 12px;
+  border-radius: 4px;
   margin-top: 15px;
-}
-
-/* Success Page Styles */
-.success-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-  background-color: var(--background-color);
-}
-
-.success-card {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-  padding: 40px;
   text-align: center;
-  max-width: 400px;
+}
+
+.card-input-fields input.error {
+  border-color: #ff4d4f;
+}
+
+.pay-now-button:disabled {
+  background-color: #d9d9d9;
+  cursor: not-allowed;
+}
+
+
+.billing-section {
+  margin-top: 30px;
+}
+
+.billing-section h2 {
+  font-size: 16px;
+  margin-bottom: 15px;
+}
+
+.country-select select {
   width: 100%;
-}
-
-.success-icon {
-  color: var(--secondary-color);
-  font-size: 80px;
-  margin-bottom: 20px;
-}
-
-.success-details {
-  margin: 20px 0;
-  text-align: left;
-}
-
-.success-details p {
-  display: flex;
-  justify-content: space-between;
-  margin: 10px 0;
-  color: #333;
-}
-
-.success-details p svg {
-  margin-right: 10px;
-  color: var(--primary-color);
-}
-
-.back-button {
-  background-color: var(--primary-color);
-  color: white;
-  border: none;
-  padding: 12px 24px;
-  border-radius: 6px;
+  padding: 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  margin-bottom: 15px;
+  background-color: white;
   cursor: pointer;
-  transition: background-color 0.3s ease;
 }
 
-.back-button:hover {
-  background-color: #3a7bd5;
+.name-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 15px;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+.name-row input {
+  flex: 1;
+  padding: 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+}
+
+.full-width {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  margin-bottom: 15px;
+}
+
+.postal-city-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 15px;
+}
+
+.postal-city-row input {
+  flex: 1;
+  padding: 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+}
+
+/* Optional: Add focus styles */
+input:focus, select:focus {
+  outline: none;
+  border-color: #0047cc;
+  box-shadow: 0 0 0 1px rgba(0,71,204,0.1);
+}
+
+/* Optional: Add hover styles */
+input:hover, select:hover {
+  border-color: #999;
+}
+
+
+.card-element-container {
+  padding: 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background-color: white;
+  margin-bottom: 15px;
+}
+
+.card-element-container.StripeElement--focus {
+  border-color: #0047cc;
+  box-shadow: 0 0 0 1px rgba(0,71,204,0.1);
+}
+
+.card-element-container.StripeElement--invalid {
+  border-color: #ff4d4f;
 }
 `;
 
-// Inject styles
-const styleSheet = document.createElement("style")
-styleSheet.type = "text/css"
-styleSheet.innerText = styles
-document.head.appendChild(styleSheet)
+// Add the styles to your document
+const styleSheet = document.createElement("style");
+styleSheet.type = "text/css";
+styleSheet.innerText = styles;
+document.head.appendChild(styleSheet);

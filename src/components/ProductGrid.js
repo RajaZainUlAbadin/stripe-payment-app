@@ -1,11 +1,13 @@
 // components/ProductGrid.jsx
 import React from 'react';
+import { useNavigate } from 'react-router-dom'; // Add this import
 import ProductCard from './ProductCard.js';
 import './ProductGrid.css';
 
 const ProductGrid = ({ products }) => {
+const navigate = useNavigate(); // Initialize useNavigate hook
   const handleProductClick = (title, price) => {
-    console.log(`Selected product: ${title} - USD ${price}`);
+    navigate('/payment', { state: { productTitle: title, amount: price } });
   };
 
   return (
