@@ -310,7 +310,7 @@ const CustomPaymentForm = ({ productTitle, amount })  => {
       }
   
       // Send payment to backend
-      const response = await axios.post('http://localhost:5000/api/process-payment', {
+      const response = await axios.post('http://161.35.38.181:5000/api/process-payment', {
         paymentMethodId: paymentMethod.id,
         amount: parseFloat(amount.replace(/,/g, '')),
         currency: 'usd',

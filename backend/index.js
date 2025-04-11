@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const path = require('path');
 const cors = require('cors');
 
 
@@ -8,6 +9,8 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+
+app.use(express.static(path.join(__dirname, 'build')));
 
 // Process Payment
 app.post('/api/process-payment', async (req, res) => {
@@ -53,6 +56,11 @@ app.post('/api/process-payment', async (req, res) => {
       details: error.raw // Include more detailed error info
     });
   }
+});
+
+// Serve React app
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });
 
 const PORT = process.env.PORT || 5000;
