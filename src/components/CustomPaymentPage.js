@@ -19,7 +19,7 @@ import {
 } from 'react-icons/fa';
 
 // Load Stripe outside of component to avoid CustomPaymentForm  on every render
-const stripePromise = loadStripe('pk_test_51M1SQ7LH7S2uAzTgzX9wR3GliIk6bkD1jFp8XfAkx5sb4ywAocHRloqrkfZvclpBp4uFjfPgkMPFNWVL6xg0Rp0G00vBGAxqtc');
+const stripePromise = loadStripe('pk_test_51Qk7O5AGEAsU6cwJd0gZkfTHG5PjtPTas19Ybgn24HA5wo4m0B5tOM0bAPRyDJPzALGgcGSwHw1eVxmFb6MWuC0O00tlJGZmNV');
 
 // Success Page Component
 const SuccessPage = ({ paymentDetails, amount, productTitle }) => {
