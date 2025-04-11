@@ -1,0 +1,25 @@
+/* Header.css */
+.header {
+    padding: 15px 0;
+  }
+  
+  .left-section {
+    display: flex;
+    align-items: center;
+    gap: 20px; /* Space between logo and nav */
+  }
+  
+  .logo img {
+    height: auto;
+    max-width: 90px;
+  }
+  
+  nav a {
+    text-decoration: none;
+    color: #333;
+    font-size: 16px;
+  }
+  
+  nav a:hover {
+    color: #0066cc;
+  }

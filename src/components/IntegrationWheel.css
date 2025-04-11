@@ -1,0 +1,18 @@
+/* IntegrationWheel.css */
+.integration-wheel {
+    width: 200px;
+    height: 200px;
+    margin: 0 auto 20px;
+    position: relative;
+    border-radius: 50%;
+    background: #f5f5f5;
+  }
+  
+  .center-logo {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #0066cc;
+    font-weight: bold;
+  }
