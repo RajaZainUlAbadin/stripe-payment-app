@@ -309,7 +309,7 @@ const styles = `
 :root {
   --primary-color: #4a90e2;
   --secondary-color: #4CAF50;
-  --background-color: #f4f6f9;
+  --background-color: #ffffff;
 }
 
 body {

@@ -1,0 +1,32 @@
+/* ProductCard.css */
+.product-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  cursor: pointer;
+}
+
+.product-info {
+  text-align: center;
+  margin-top: 15px;
+}
+
+.product-title {
+  font-size: 14px;
+  color: #333;
+  margin: 0 0 8px 0;
+  font-weight: normal;
+}
+
+
+.product-card:hover .product-title {
+  text-decoration: underline;
+}
+
+.product-price {
+  font-size: 14px;
+  color: #333;
+  margin: 0;
+  font-weight: normal;
+}
