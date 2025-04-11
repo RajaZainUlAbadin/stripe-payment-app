@@ -23,31 +23,80 @@ const stripePromise = loadStripe('pk_test_51Qk7O5AGEAsU6cwJd0gZkfTHG5PjtPTas19Yb
 
 // Success Page Component
 const SuccessPage = ({ paymentDetails, amount, productTitle }) => {
+  // Remove commas and convert to number
+  const cleanAmount = typeof amount === 'string' ? amount.replace(/,/g, '') : amount;
+    
+  // Format the amount
+  const formattedAmount = new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(parseFloat(cleanAmount));
+
+  console.log('Original amount:', amount); // For debugging
+  console.log('Formatted amount:', formattedAmount); // For debugging
+
   return (
-    <div className="payment-layout">
+    <div className="success-layout">
       <div className="success-container">
-        <div className="success-card">
+        <div className="success-header">
           <FaCheckCircle className="success-icon" />
-          <h2>Payment Successful!</h2>
-          <div className="success-details">
-            <p>
-              <span>Product:</span>
-              <span>{productTitle}</span>
-            </p>
-            <p>
-              <span>Amount Paid:</span>
-              <span>USD ${amount}</span>
-            </p>
-            <p>
-              <span>Email:</span>
-              <span>{paymentDetails.email}</span>
-            </p>
+          <h1>Payment successful</h1>
+          <p className="success-subtitle">Thank you for your purchase</p>
+        </div>
+
+        <div className="receipt-container">
+          <div className="receipt-section">
+            <h3>Amount paid</h3>
+            <div className="amount-row">
+              <span className="large-amount">USD ${formattedAmount}</span>
+            </div>
           </div>
+
+          <div className="receipt-section">
+            <h3>Summary</h3>
+            <div className="summary-row">
+              <span>Date</span>
+              <span>{new Date().toLocaleDateString()}</span>
+            </div>
+            <div className="summary-row">
+              <span>Product</span>
+              <span>{productTitle}</span>
+            </div>
+            <div className="summary-row">
+              <span>Payment method</span>
+              <span>Credit Card</span>
+            </div>
+          </div>
+
+          <div className="receipt-section">
+            <h3>Receipt details</h3>
+            <div className="summary-row">
+              <span>Email</span>
+              <span>{paymentDetails.email}</span>
+            </div>
+            <div className="summary-row">
+              <span>Name</span>
+              <span>{`${paymentDetails.firstName} ${paymentDetails.lastName}`}</span>
+            </div>
+            <div className="summary-row">
+              <span>Address</span>
+              <span>{`${paymentDetails.address}, ${paymentDetails.city}, ${paymentDetails.country}`}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="success-actions">
           <button 
             onClick={() => window.location.href = '/'}
             className="back-button"
           >
             Return to Home
+          </button>
+          <button 
+            onClick={() => window.print()}
+            className="print-button"
+          >
+            Print receipt
           </button>
         </div>
       </div>
@@ -288,7 +337,7 @@ const CustomPaymentForm = ({ productTitle, amount })  => {
 
   // If payment is successful, show success page
   if (paymentSuccess) {
-    return <SuccessPage paymentDetails={paymentDetails} />;
+    return <SuccessPage paymentDetails={paymentDetails} amount={amount.toString()}  productTitle={productTitle}  />;
   }
 
   const countries = [
@@ -883,6 +932,129 @@ input:hover, select:hover {
   width: 100%;
   height: 100%;
   object-fit: contain;
+}
+
+
+
+.success-layout {
+  max-width: 600px;
+  margin: 40px auto;
+  padding: 0 20px;
+}
+
+.success-container {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.success-header {
+  text-align: center;
+  padding: 40px 20px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.success-icon {
+  color: #0047cc;
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.success-header h1 {
+  margin: 0;
+  font-size: 24px;
+  color: #1a1f36;
+  font-weight: 600;
+}
+
+.success-subtitle {
+  color: #697386;
+  margin: 8px 0 0;
+  font-size: 16px;
+}
+
+.receipt-container {
+  padding: 24px;
+}
+
+.receipt-section {
+  margin-bottom: 32px;
+}
+
+.receipt-section h3 {
+  color: #1a1f36;
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 16px;
+}
+
+.amount-row {
+  background: #f7fafc;
+  padding: 16px;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.large-amount {
+  font-size: 32px;
+  font-weight: 600;
+  color: #1a1f36;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid #e0e0e0;
+  color: #1a1f36;
+}
+
+.summary-row:last-child {
+  border-bottom: none;
+}
+
+.summary-row span:first-child {
+  color: #697386;
+}
+
+.success-actions {
+  padding: 24px;
+  border-top: 1px solid #e0e0e0;
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.back-button, .print-button {
+  padding: 10px 20px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.back-button {
+  background: #0047cc;
+  color: white;
+  border: none;
+}
+
+.print-button {
+  background: white;
+  color: #0047cc;
+  border: 1px solid #0047cc;
+}
+
+@media print {
+  .success-actions {
+    display: none;
+  }
+  
+  .success-layout {
+    margin: 0;
+    padding: 0;
+    box-shadow: none;
+  }
 }
 `;
 
