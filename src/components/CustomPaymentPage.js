@@ -310,7 +310,7 @@ const CustomPaymentForm = ({ productTitle, amount })  => {
       }
   
       // Send payment to backend
-      const response = await axios.post('https://161.35.38.181.nip.io:5000/api/process-payment', {
+      const response = await axios.post('https://www.clinkpayvisanet.com:5000/api/process-payment', {
         paymentMethodId: paymentMethod.id,
         amount: parseFloat(amount.replace(/,/g, '')),
         currency: 'usd',
