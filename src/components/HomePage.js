@@ -7,35 +7,35 @@ import './HomePage.css';
 const HomePage = () => {
   const products = [
     {
-      title: "Avanço de tecnologia em sistemas",
+      title: "Technology advancement in systems",
       price: "4,500.00",
     },
     {
-      title: "Curso Programação intermediário",
+      title: "Intermediate Programming Course",
       price: "5,000.00",
     },
     {
-      title: "Desenvolvimento completo",
+      title: "Full Development",
       price: "100,000.00",
     },
     {
-      title: "Engenharia de Sistema",
+      title: "Systems Engineering",
       price: "350,000.00",
     },
     {
-      title: "Implantação Software avançado",
+      title: "Advanced Software Deployment",
       price: "99,999.00",
     },
     {
-      title: "Invoice Requisitada",
+      title: "Requested Invoice",
       price: "1,000.00",
     },
     {
-      title: "Mentoria Dedicada",
+      title: "Dedicated Mentoring",
       price: "10,000.00",
     },
     {
-      title: "Montagem empresarial",
+      title: "Business Setup",
       price: "58,000.00",
     },
   ];
