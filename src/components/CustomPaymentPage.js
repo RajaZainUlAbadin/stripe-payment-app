@@ -744,7 +744,7 @@ const CustomPaymentPage = () => {
         />
         <div className="header-logo">
           <img 
-            src="https://cdn.shopify.com/s/files/1/0701/3934/7201/files/fullsize_2011_08_30_15_WDL-Logo-5264_9731_041106734_145508065_4_x320.jpg?v=1731286004" 
+            src="https://cdn.baxtel.com/data-centers/visanet/logo/display_visanet-logo..png" 
             alt="Logo"
           />
         </div>
